@@ -113,7 +113,7 @@ SQL
 # '...' literal safely (labels/hosts come from this script's own config,
 # not untrusted input, but this costs nothing and avoids surprises).
 sql_escape() {
-  printf '%s' "${1//\'/\'\'}"
+  printf '%s' "${1//\'/''}"
 }
 
 ### --- Probe one target, print its INSERT statement to stdout -----------------
