@@ -20,6 +20,14 @@ set -u
 # script per NAS, each with its own SiteName + Targets.
 SiteName="Bottens"
 
+# Absolute path to the SQLite DB — deliberately NOT derived from $HOME:
+# this script runs as root (see the privilege check below), and $HOME under
+# `sudo`/Task Scheduler resolves to root's home, not the NAS admin user's —
+# on Deimos that silently produced /root/NetMonitor-Bottens.db, readable
+# only via sudo. Pin it explicitly so it always lands in the same place
+# regardless of how the script was invoked.
+DbFile="/volume1/homes/Deimos-admin/NetMonitor-${SiteName}.db"
+
 # Optional: bind pings to a specific interface (leave empty to let the OS
 # pick the default route). Rarely needed on a single-homed NAS — set only
 # if the NAS has multiple interfaces/routes and you need to test a specific
@@ -42,8 +50,9 @@ Targets=(
 # StBenoit (NAS "StBenoit", ISP Free/Proxad — traceroute run 2026-08-26 came
 # back clean, no bottleneck hop like Bottens' Swisscom BRAS; kept anyway as
 # a baseline and in case a similar spike ever shows up here). To deploy on
-# that NAS, replace SiteName and Targets above with:
+# that NAS, replace SiteName, DbFile and Targets above with:
 #   SiteName="StBenoit"
+#   DbFile="/volume1/homes/StBenoit-admin/NetMonitor-${SiteName}.db"  # adjust the admin username if different
 #   Targets=(
 #     "Freebox:192.168.1.254"
 #     "ProxadEdge1:194.149.162.6"
@@ -61,7 +70,6 @@ Targets=(
 
 PingCount=5      # packets sent per target per run
 PingTimeout=2    # seconds to wait per reply (ping -W)
-DbFile="$HOME/NetMonitor-${SiteName}.db"
 
 ### --- Privilege check ------------------------------------------------------------
 
@@ -162,3 +170,9 @@ done
 sql_batch+="COMMIT;"
 
 printf '%s\n' "$sql_batch" | sqlite3 "$DbFile"
+
+# The script runs as root, so the DB (and its WAL/SHM sidecar files) would
+# otherwise end up root-only — make it world-readable so it can be queried
+# ad hoc with a plain `sqlite3` call instead of `sudo sqlite3`. Root stays
+# the only writer since only this script touches it.
+chmod 644 "$DbFile"* 2>/dev/null || true
