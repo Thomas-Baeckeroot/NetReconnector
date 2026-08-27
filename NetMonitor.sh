@@ -36,13 +36,24 @@ NetCard=""
 
 # Targets to probe on every run: "Label:IP-or-host"
 #   - the LAN gateway/box, to isolate "internet down" from "LAN down"
-#   - the first ISP-side hop from `traceroute` (see investigation notes),
-#     to catch access-line issues (retrains, bufferbloat) close to home
+#   - an ISP-side hop close to home, to catch access-line issues
+#     (retrains, bufferbloat) before they reach the public internet
 #   - one or two well-known stable public resolvers, as an internet-reachability baseline
-# Bottens (current): local box + first Swisscom-side hop seen in traceroute + public DNS.
+# Bottens (current): local box + Init7/Swisscom NNI + public DNS.
+# 138.187.22.32 (hop 2 in the original traceroute, ex-"SwisscomBRAS") was tried
+# first but never answers direct ICMP echo — confirmed 2026-08-27 both by a
+# manual ping (100% loss) and by DB history (0/31 successful probes since the
+# first logged run at 00:00:13 that day). It only ever "responded" as a
+# traceroute hop, i.e. via TTL-exceeded replies generated for someone else's
+# transit traffic — never via an actual echo reply to a packet addressed to
+# it. Likely CoPP-style ICMP rate-limiting/blocking on that router, not an
+# intermittent issue. Every "100% loss" row logged against it in the DB is a
+# false positive, not a real outage. 77.109.130.60 (nni-init7-bbcs, the actual
+# Init7<->Swisscom handoff) responds fine and is the router the original
+# bottleneck investigation cared about anyway.
 Targets=(
   "Fritzbox:192.168.178.1"
-  "SwisscomBRAS:138.187.22.32"
+  "Init7SwisscomNNI:77.109.130.60"
   "Cloudflare:1.1.1.1"
   "Quad9:9.9.9.9"
 )
